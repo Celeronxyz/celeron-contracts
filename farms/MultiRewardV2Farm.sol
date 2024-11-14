@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -17,7 +16,7 @@ import {IVault} from "../interfaces/IVault.sol";
 *   @title Celeron Multi-Rewards Farm
 */
 contract CeleronMultiRewardV2Farm is IMultiRewardFarm, Initializable,
-OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -218,20 +217,6 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
         require(startTs == 0, "Farm: mining already started");
 
         startTs = block.timestamp;
-    }
-
-    /// @notice Check the pool created or not
-    function checkDuplicatePool(address _token) internal view {
-        uint _existed = 0;
-
-        for (uint256 i = 0; i < poolInfoList.length; i++) {
-            if (address(poolInfoList[i].assets) == _token) {
-                _existed = 1;
-                break;
-            }
-        }
-
-        require(_existed == 0, "Farm: pool already existed");
     }
 
     /// @notice Add new pool
@@ -503,7 +488,7 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     /// @notice Calculate the rewards and transfer to user
     /// @param _pid The pool id
     /// @param _user The user address
-    function harvest(uint256 _pid, address _user) public whenNotPaused {
+    function harvest(uint256 _pid, address _user) public {
         require(startTs > 0, "Farm: mining not start!!");
         require(_user != address(0), "Farm: invalid user address");
 
@@ -526,7 +511,7 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     /// @notice Deposit assets to the farm
     /// @param _pid The pool id
     /// @param _amount The amount of assets to deposit
-    function deposit(uint256 _pid, uint256 _amount) external payable nonReentrant whenNotPaused returns (uint){
+    function deposit(uint256 _pid, uint256 _amount) external payable nonReentrant returns (uint){
         require(startTs > 0, "Farm: mining not start!!");
 
         PoolInfo storage pool = poolInfoList[_pid];
@@ -585,7 +570,7 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     /// @notice Withdraw assets from the farm
     /// @param _pid The pool id
     /// @param _amount The amount of assets to withdraw
-    function withdraw(uint256 _pid, uint256 _amount) external nonReentrant whenNotPaused returns (uint){
+    function withdraw(uint256 _pid, uint256 _amount) external nonReentrant returns (uint){
         require(startTs > 0, "Farm: mining not start!!");
 
         PoolInfo storage pool = poolInfoList[_pid];
@@ -620,32 +605,23 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
         return 0;
     }
 
-    /// @dev Pause the farm
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /// @dev Unpause the farm
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
     /// @dev Get the multiplier
     function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256){
         return _to - _from;
     }
 
-    /// @notice Set the pool vault
-    /// @param _pid The pool id
-    /// @param _vault The vault address
-    function setPoolVault(
-        uint256 _pid,
-        IVault _vault
-    ) external onlyOwner {
+    /// @notice Check the pool created or not
+    function checkDuplicatePool(address _token) internal view {
+        uint _existed = 0;
 
-        poolInfoList[_pid].vault = _vault;
-        IERC20(poolInfoList[_pid].assets).approve(address(poolInfoList[_pid].vault), 0);
-        IERC20(poolInfoList[_pid].assets).approve(address(poolInfoList[_pid].vault), type(uint256).max);
+        for (uint256 i = 0; i < poolInfoList.length; i++) {
+            if (address(poolInfoList[i].assets) == _token) {
+                _existed = 1;
+                break;
+            }
+        }
+
+        require(_existed == 0, "Farm: pool already existed");
     }
 
     /// @dev Transfer the reward to user
