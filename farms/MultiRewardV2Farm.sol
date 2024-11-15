@@ -75,7 +75,6 @@ OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ) public initializer {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
-        __Pausable_init();
 
         ethAddress = _ethAddress;
         totalAllocPoint = 0;
